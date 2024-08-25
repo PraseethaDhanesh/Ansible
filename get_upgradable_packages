@@ -1,0 +1,33 @@
+---
+- name: Get list of upgradeable packages on Debian-based systems
+  hosts: all
+  become: yes
+  gather_facts: yes
+  tasks:
+    - name: Execute apt list --upgradable
+      ansible.builtin.shell:  apt list --upgradable
+      register: upgradeable_packages_output
+
+    - name: Execute apt list --upgradable
+      ansible.builtin.shell: apt list --upgradable 2>/dev/null | grep -v '^Listing' | wc -l
+      register: upgradeable_packages_output_count
+
+
+    - name: Append upgradeable packages count to CSV file
+      local_action:
+        module: ansible.builtin.lineinfile
+        path: "{{ playbook_dir }}/list.csv"
+        line: "{{ ansible_default_ipv4.address }}, {{ upgradeable_packages_output_count.stdout }}, {{ ansible_default_ipv4.address | regex_replace('\\.', '-') }}.csv"
+        create: yes
+        state: present
+      delegate_to: localhost
+
+
+
+    - name: Save output to CSV file
+      ansible.builtin.copy:
+        content: |
+          Host,Package
+          {{ ansible_default_ipv4.address }},{{ upgradeable_packages_output.stdout | regex_replace('\n', '\n' + ansible_default_ipv4.address + '\t') }}
+        dest: "{{ playbook_dir }}/files/{{ ansible_default_ipv4.address | regex_replace('\\.', '-') }}.csv"
+      delegate_to: localhost
