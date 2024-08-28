@@ -1,0 +1,46 @@
+---
+- name: Get list of upgradeable packages on Debian-based systems
+  hosts: all
+  become: yes
+  gather_facts: yes
+  tasks:
+    - name: Execute apt list --upgradable
+      ansible.builtin.shell: apt list --upgradable
+      register: upgradeable_packages_output
+
+    - name: Execute apt list --upgradable
+      ansible.builtin.shell: apt list --upgradable 2>/dev/null | grep -v '^Listing' | wc -l
+      register: upgradeable_packages_output_count
+
+    - name: Append upgradeable packages count to CSV file
+      local_action:
+        module: ansible.builtin.lineinfile
+        path: "{{ playbook_dir }}/list.csv"
+        line: "{{ ansible_default_ipv4.address }}, {{ upgradeable_packages_output_count.stdout }}, {{ ansible_default_ipv4.address | regex_replace('\\.', '-') }}.csv"
+        create: yes
+        state: present
+      delegate_to: localhost
+
+    - name: Save output to temporary file
+      ansible.builtin.copy:
+        content: |
+          Host,Package
+          {{ ansible_default_ipv4.address }},{{ upgradeable_packages_output.stdout | regex_replace('\n', '\n' + ansible_default_ipv4.address + '\t') }}
+        dest: "/tmp/{{ ansible_default_ipv4.address | regex_replace('\\.', '-') }}.csv"
+      delegate_to: localhost
+
+    - name: Upload the CSV file to S3
+      aws_s3:
+        bucket: your-bucket-name
+        object: "ansible-output/{{ ansible_default_ipv4.address | regex_replace('\\.', '-') }}.csv"
+        src: "/tmp/{{ ansible_default_ipv4.address | regex_replace('\\.', '-') }}.csv"
+        mode: put
+	AWS_ACCESS_KEY_ID='AKIAWYGOZ7SJUKIXOVNI'
+	AWS_SECRET_ACCESS_KEY='qHQ9xuI8qiVQWzM6a8SuAY56V/rWtUbIV3qeyezt'
+      delegate_to: localhost
+
+    - name: Clean up the temporary file
+      ansible.builtin.file:
+        path: "/tmp/{{ ansible_default_ipv4.address | regex_replace('\\.', '-') }}.csv"
+        state: absent
+      delegate_to: localhost
