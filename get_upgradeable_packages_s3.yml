@@ -8,7 +8,7 @@
       ansible.builtin.shell: apt list --upgradable
       register: upgradeable_packages_output
 
-    - name: Execute apt list --upgradable
+    - name: Get count of upgradeable packages
       ansible.builtin.shell: apt list --upgradable 2>/dev/null | grep -v '^Listing' | wc -l
       register: upgradeable_packages_output_count
 
@@ -25,18 +25,18 @@
       ansible.builtin.copy:
         content: |
           Host,Package
-          {{ ansible_default_ipv4.address }},{{ upgradeable_packages_output.stdout | regex_replace('\n', '\n' + ansible_default_ipv4.address + '\t') }}
+          {{ ansible_default_ipv4.address }},{{ upgradeable_packages_output.stdout | regex_replace('\n', '\n' + ansible_default_ipv4.address + ',') }}
         dest: "/tmp/{{ ansible_default_ipv4.address | regex_replace('\\.', '-') }}.csv"
       delegate_to: localhost
 
     - name: Upload the CSV file to S3
-      aws_s3:
+      amazon.aws.aws_s3:
         bucket: your-bucket-name
         object: "ansible-output/{{ ansible_default_ipv4.address | regex_replace('\\.', '-') }}.csv"
         src: "/tmp/{{ ansible_default_ipv4.address | regex_replace('\\.', '-') }}.csv"
         mode: put
-	AWS_ACCESS_KEY_ID='AKIAWYGOZ7SJUKIXOVNI'
-	AWS_SECRET_ACCESS_KEY='qHQ9xuI8qiVQWzM6a8SuAY56V/rWtUbIV3qeyezt'
+        aws_access_key: "{{ lookup('env', 'AKIAWYGOZ7SJUKIXOVNI') }}"
+        aws_secret_key: "{{ lookup('env', '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') }}"
       delegate_to: localhost
 
     - name: Clean up the temporary file
