@@ -9,7 +9,7 @@
       register: upgradeable_packages_output
 
     - name: Get count of upgradeable packages
-      ansible.builtin.shell: apt list --upgradable 2>/dev/null | grep -v '^Listing' | wc -l
+      ansible.builtin.shell: "apt list --upgradable 2>/dev/null | grep -v '^Listing' | wc -l"
       register: upgradeable_packages_output_count
 
     - name: Append upgradeable packages count to CSV file
@@ -35,10 +35,9 @@
         bucket: your-bucket-name
         object: "ansible-output/{{ ansible_default_ipv4.address | regex_replace('\\.', '-') }}.csv"
         src: "/tmp/{{ ansible_default_ipv4.address | regex_replace('\\.', '-') }}.csv"
-        mode: '0644'
         mode: put
-        aws_access_key: "{{ lookup('env', 'AKIAWYGOZ7SJUKIXOVNI') }}"
-        aws_secret_key: "{{ lookup('env', 'qHQ9xuI8qiVQWzM6a8SuAY56V/rWtUbIV3qeyezt') }}"
+        aws_access_key: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
+        aws_secret_key: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
       delegate_to: localhost
 
     - name: Clean up the temporary file
