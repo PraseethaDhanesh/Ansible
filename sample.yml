@@ -1,0 +1,17 @@
+---
+- name: Test file creation and copy
+  hosts: localhost
+  tasks:
+    - name: Create a test file
+      ansible.builtin.copy:
+        content: "Test content"
+        dest: "/tmp/testfile.txt"
+        mode: '0644'
+
+    - name: Verify file content
+      ansible.builtin.command: cat /tmp/testfile.txt
+      register: file_content
+
+    - name: Print file content
+      ansible.builtin.debug:
+        msg: "{{ file_content.stdout }}"
